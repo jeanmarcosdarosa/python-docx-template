@@ -4,7 +4,7 @@ Created : 2021-07-30
 
 @author: Eric Lapouyade
 """
-from docx.oxml import OxmlElement, parse_xml
+from docx.oxml import OxmlElement
 from docx.oxml.ns import qn
 
 
@@ -19,11 +19,13 @@ class InlineImage(object):
     width = None
     height = None
     anchor = None
+    remove_space = False
 
-    def __init__(self, tpl, image_descriptor, width=None, height=None, anchor=None):
+    def __init__(self, tpl, image_descriptor, width=None, height=None, anchor=None, remove_space=False):
         self.tpl, self.image_descriptor = tpl, image_descriptor
         self.width, self.height = width, height
         self.anchor = anchor
+        self.remove_space = remove_space
 
     def _add_hyperlink(self, run, url, part):
         # Create a relationship for the hyperlink
@@ -54,18 +56,21 @@ class InlineImage(object):
             self.image_descriptor,
             self.width,
             self.height,
-        ).xml
+        )
+        if self.remove_space:
+            pic.set('distT', '0')
+            pic.set('distB', '0')
+            pic.set('distL', '0')
+            pic.set('distR', '0')
         if self.anchor:
-            run = parse_xml(pic)
-            if run.xpath(".//a:blip"):
+            if pic.xpath(".//a:blip"):
                 hyperlink = self._add_hyperlink(
-                    run, self.anchor, self.tpl.current_rendering_part
+                    pic, self.anchor, self.tpl.current_rendering_part
                 )
-                pic = hyperlink.xml
-
+                pic = hyperlink
         return (
             "</w:t></w:r><w:r><w:drawing>%s</w:drawing></w:r><w:r>"
-            '<w:t xml:space="preserve">' % pic
+            '<w:t xml:space="preserve">' % pic.xml
         )
 
     def __unicode__(self):
